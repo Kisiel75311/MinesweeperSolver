@@ -18,6 +18,7 @@ screenshot = pyautogui.screenshot()
 screenshot = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
 template = cv2.imread('textures/tile_hidden.png', cv2.IMREAD_UNCHANGED)
 
+found_scale = None
 # Sprawdzenie różnych skal
 for scale in np.linspace(0.2, 3.0, 20)[::-1]:
     resized_screenshot = cv2.resize(screenshot, (int(screenshot.shape[1] * scale), int(screenshot.shape[0] * scale)))
@@ -26,8 +27,10 @@ for scale in np.linspace(0.2, 3.0, 20)[::-1]:
     if max_val > 0.8:
         print("Found match with scale ", scale)
         print("Position (left={0}, top={1}), Size (width={2}, height={3})".format(max_loc[0], max_loc[1], template.shape[1], template.shape[0]))
+        found_scale = scale
         break
 
-locations = list(pyautogui.locateAllOnScreen('textures/tile_hidden.png'))
-for i, location in enumerate(locations):
-    print(f"Match {i+1}: Position (left={location.left}, top={location.top}), Size (width={location.width}, height={location.height})")
+if found_scale is not None:
+    locations = np.where(result >= 0.8)
+    for pt in zip(*locations[::-1]):
+        print("Match at Position (left={0}, top={1}), Size (width={2}, height={3})".format(pt[0], pt[1], template.shape[1], template.shape[0]))
