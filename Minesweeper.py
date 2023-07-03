@@ -62,3 +62,17 @@ class Minesweeper:
 
             return 1  # Standardowa nagroda za bezpieczny ruch
 
+    def get_state(self):
+        state = [[0] * self.BOARD_SIZE for _ in range(self.BOARD_SIZE)]
+        for i in range(self.BOARD_SIZE):
+            for j in range(self.BOARD_SIZE):
+                if self.revealed_board[i][j]:  # Jeśli pole jest odkryte
+                    if self.board[i][j] == '*':  # Jeśli na polu jest bomba
+                        state[i][j] = -1
+                    else:  # Jeśli na polu jest liczba (ilość bomb w sąsiedztwie)
+                        state[i][j] = int(self.board[i][j])
+                else:  # Jeśli pole jest nieodkryte
+                    state[i][j] = 0
+        return state
+
+

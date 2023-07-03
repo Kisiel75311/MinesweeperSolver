@@ -2,6 +2,8 @@ from Minesweeper import Minesweeper, GameState
 from keras.models import load_model
 from DQNAgent import DQNAgent
 import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 class MinesweeperDQNAgent(DQNAgent):
     def __init__(self, state_size, action_size):
@@ -9,64 +11,81 @@ class MinesweeperDQNAgent(DQNAgent):
         self.state = np.zeros((1, state_size))
 
     def update_state(self, new_state):
-        self.state = np.reshape(new_state, (1, state_size))
+        self.state = np.reshape(new_state, (1, self.state_size))
 
     def choose_action(self):
         return super().act(self.state)
 
-    def train(self, action, reward, new_state, done):
-        super().train(self.state, action, reward, np.reshape(new_state, (1, state_size)), done)
-        self.update_state(new_state)
+    def train(self, state, action, reward, next_state, done):
+        super().train(state, action, reward, np.reshape(next_state, (1, self.state_size)), done)
+        self.update_state(next_state)
 
 
 if __name__ == '__main__':
-    game = Minesweeper()
-    state_size = game.BOARD_SIZE * game.BOARD_SIZE
-    action_size = game.BOARD_SIZE * game.BOARD_SIZE
-    agent = MinesweeperDQNAgent(state_size, action_size)
 
-    model_filename = 'dqn_model.h5'
+    NUM_GAMES = 100  # Define the number of games you want to run
+    games = []
+    wins = []
+    model_scores = []
 
-    # Wczytaj model DQN, jeśli istnieje
-    try:
-        agent.model = load_model(model_filename)
-        print("Wczytano model DQN.")
-    except OSError:
-        print("Nie znaleziono zapisanego modelu DQN. Rozpoczynanie od zera.")
+    for i in range(NUM_GAMES):
+        game = Minesweeper()
+        state_size = game.BOARD_SIZE * game.BOARD_SIZE
+        action_size = game.BOARD_SIZE * game.BOARD_SIZE
+        agent = MinesweeperDQNAgent(state_size, action_size)
 
-    moves_counter = 0  # Inicjalizacja licznika ruchów
-    counter = 0
-    while True:
-        counter += 1
+        model_filename = 'dqn_model.h5'
+
+        try:
+            agent.model = load_model(model_filename)
+            print("Model loaded.")
+        except OSError:
+            print("No saved model found. Starting from scratch.")
+
+        moves_counter = 0
+        num_wins = 0  # You need to decide how to update this value
+
         while game.state == GameState.RUNNING:
-            game.print_board()
             action = agent.choose_action()
             x, y = action // game.BOARD_SIZE, action % game.BOARD_SIZE
-            print(f"Ruch agenta: {x}, {y}")
             reward = game.make_move(x, y)
-            moves_counter += 1  # Zwiększanie licznika ruchów po każdym ruchu agenta
+            moves_counter += 1
 
-            # Zaktualizuj stan agenta i przeprowadź uczenie
-            new_state = game.get_state().flatten()
-            agent.train(action, reward, new_state, game.state != GameState.RUNNING)
+            new_state = game.get_state()
+            new_state = np.array(new_state).flatten()
+            agent.train(agent.state, action, reward, new_state, game.state != GameState.RUNNING)
 
-        game.print_board()
         if game.state == GameState.WIN:
-            print("Wygrana!")
-            break
+            print("Win!")
+            num_wins += 1  # Update the number of wins
         elif game.state == GameState.LOSE:
-            print("Przegrana!")
+            print("Lose!")
 
-        # Wyświetl licznik ruchów
-        print(f"Liczba ruchów agenta: {moves_counter}")
+        print(f"Number of moves made by the agent: {moves_counter}")
 
-        # Zapisz model DQN
         agent.model.save(model_filename)
-        print("Zapisano model DQN.")
+        print("Model saved.")
 
-        # Inicjalizuj nową grę i zresetuj stan agenta
         game = Minesweeper()
-        agent.update_state(game.get_state().flatten())
-        moves_counter = 0  # Zresetuj licznik ruchów
+        state = game.get_state()
+        state = np.array(state).flatten()
+        agent.update_state(state)
+        moves_counter = 0  # Reset the moves counter
 
-        print("Counter: ", counter)
+        model_score = 0  # You need to decide how to calculate this value
+
+        games.append(i)
+        wins.append(num_wins)
+        model_scores.append(model_score)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    ax.scatter(games, model_scores, wins, c='r', marker='o')
+
+    ax.set_xlabel('Number of Games')
+    ax.set_ylabel('Model Score')
+    ax.set_zlabel('Number of Wins')
+
+    plt.show()
+    plt.savefig('plot.png')
