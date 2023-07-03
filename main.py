@@ -23,7 +23,7 @@ class MinesweeperDQNAgent(DQNAgent):
 
 if __name__ == '__main__':
 
-    NUM_GAMES = 100  # Define the number of games you want to run
+    NUM_GAMES = 10000  # Define the number of games you want to run
     games = []
     wins = []
     model_scores = []
